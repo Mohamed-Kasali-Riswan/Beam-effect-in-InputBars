@@ -1,0 +1,110 @@
+
+Created a Beam effect and passed colors, duration etc and extended it in the View so it can be used as an modifier too.
+
+extension View {
+    @ViewBuilder
+    func borderBeam(
+        border: Color,
+        beam: [Color],
+        beamBlur: CGFloat,
+        cornerRadius: CGFloat,
+        speed: Double = 2.0,
+        animationDuration: Double? = nil,
+        isEnabled: Bool = true
+    ) -> some View {
+        self.modifier(
+            BorderBeamEffect(
+                border: border,
+                beam: beam,
+                beamBlur: beamBlur,
+                cornerRadius: cornerRadius,
+                speed: speed,
+                animationDuration: animationDuration,
+                isEnabled: isEnabled
+            )
+        )
+    }
+}
+
+// MARK: - ViewModifier
+struct BorderBeamEffect: ViewModifier {
+    var border: Color
+    var beam: [Color]
+    var beamBlur: CGFloat
+    var cornerRadius: CGFloat
+    var speed: Double
+    var animationDuration: Double?
+    var isEnabled: Bool
+
+    @State private var isVisible: Bool = true
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if isEnabled && isVisible {
+                    ZStack {
+                        KeyframeAnimator(initialValue: 0.0, repeating: true) { value in
+                            let rotation = value * 360
+
+                            let borderGradient = AngularGradient(
+                                colors: [.clear, border, .clear],
+                                center: .center,
+                                startAngle: .degrees(140 + rotation),
+                                endAngle: .degrees(270 + rotation)
+                            )
+
+                            let beamGradient = LinearGradient(
+                                colors: beam,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .fill(beamGradient)
+                                .mask {
+                                    Rectangle()
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: cornerRadius)
+                                                .blur(radius: beamBlur)
+                                                .blendMode(.destinationOut)
+                                        }
+                                }
+                                .mask {
+                                    RoundedRectangle(cornerRadius: cornerRadius)
+                                        .fill(borderGradient)
+                                        .blur(radius: beamBlur / 1.5)
+                                        .padding(-beamBlur * 2)
+                                }
+
+                        } keyframes: { _ in
+                            LinearKeyframe(1, duration: speed)
+                        }
+                    }
+                    .padding(0.5)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+                }
+            }
+            .onAppear {
+                if let duration = animationDuration {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            isVisible = false
+                        }
+                    }
+                }
+            }
+            .onChange(of: isEnabled) { enabled in
+                if enabled {
+                    isVisible = true
+                    if let duration = animationDuration {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+                            withAnimation(.easeOut(duration: 0.5)) {
+                                isVisible = false
+                            }
+                        }
+                    }
+                }
+            }
+    }
+}
