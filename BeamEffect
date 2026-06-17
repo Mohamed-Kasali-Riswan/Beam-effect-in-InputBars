@@ -1,5 +1,5 @@
 
-Created a Beam effect and passed colors, duration etc and extended it in the View so it can be used as an modifier too.
+// Created a Beam effect and passed colors, duration etc and extended it in the View so it can be used as an modifier too.
 
 extension View {
     @ViewBuilder
